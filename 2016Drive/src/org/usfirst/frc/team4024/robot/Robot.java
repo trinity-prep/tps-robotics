@@ -13,6 +13,8 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.buttons.JoystickButton;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.smartdashboard.*;
+//import edu.wpi.first.wpilibj.
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -22,17 +24,20 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  * directory.
  */
 public class Robot extends IterativeRobot {
-	//Misc Declartion
+	//Misc Dec
     String autoSelected;
     SendableChooser chooser;
     CameraServer camera;
+  //  USBCamera cam0;
+    
 	
-    //Control IO Declartion
+    //Control IO Dec
     Joystick joy;
     Joystick armCon;
     Joystick io;
-    //Button IO Declartion
-    JoystickButton kickerBut;
+    //Button IO Dec
+    
+    /*JoystickButton kickerBut;
 	JoystickButton kickerButBack;
 	JoystickButton armLeft;
 	JoystickButton armRight;
@@ -44,23 +49,36 @@ public class Robot extends IterativeRobot {
 	JoystickButton shieldDown;
 	JoystickButton lockArmUp;
 	JoystickButton lockArmDown;
-	
-	//Motor Con Declartion
+	2016 Decs to go look at.
+	*/
+    JoystickButton boxTalonUp;
+    JoystickButton boxTalonDown;
+    JoystickButton gearTalonButton;
+    
+    
+    
+	//Motor Con Dec
 	CANTalon rl;
 	CANTalon fl;
 	CANTalon fr;
 	CANTalon rr;
+	
+	Talon boxTalon;
+	Talon gearTalon;
+	Talon winchTalon;
+	
 	//Talon kickerTal;
-	
-	Talon liftGear;
-	
-	Talon leftArm;
+	/*
+	 * Talon leftArm;
 	Talon shieldMaster;
 	Talon shieldSlave;
 	Talon lockArm;
+	*/
 	
+	
+	Encoder boxEncoder;
 	//Sensor Dec
-	DigitalInput lim1;
+	/*DigitalInput lim1;
 	Encoder leftArmEncode;
 	Encoder shieldMasterEncode;
 	Encoder shieldSlaveEncode;
@@ -72,9 +90,12 @@ public class Robot extends IterativeRobot {
 	boolean armsTogether;
 	boolean leftLocked;
 	double leftArmSetPosition;
+	*/
 	boolean lockLeftButtonState;
 	boolean prevLeftLockButtonState;
 	boolean isOperatorControl = true;
+	
+	double winchSpeed;
 	
 	//Control Constants DecDef
 	final double pGain = 0.0185;
@@ -86,6 +107,10 @@ public class Robot extends IterativeRobot {
 	final String playDefense = "Play Defense";
 	final String rockWallAuto = "Rock Wall";
 	final double leftArmMechLockPosition = 170;
+	
+	final double boxMax = 312;     //////495 is near closest to full revolution  495 * (38/60) = 313.5 (rounded to not let it be broken)
+	final double boxMin = 0;
+	double boxPosition;
 	
     public void robotInit() {
     	//Misc Def
@@ -100,65 +125,89 @@ public class Robot extends IterativeRobot {
         SmartDashboard.putData("Auto choices", chooser);
         camera = CameraServer.getInstance();
         
+        
         //Control IO Def
         joy = new Joystick(0);
         armCon = new Joystick(1);
         io = new Joystick(2);
         
         //Button Def
-        kickerBut = new JoystickButton(io,11);
+        /*kickerBut = new JoystickButton(io,11);
     	kickerButBack = new JoystickButton(io,8);
-    	kickerHalf = new JoystickButton(joy,4);
+    	kickerHalf = new Joystick8AWGButton(joy,4);
     	shieldUp= new JoystickButton(io,2);
     	shieldDown = new JoystickButton(io,5);
     	lockArmUp = new JoystickButton(io,6);
     	lockArmDown = new JoystickButton(io,7);
-    	
+    	*/
+        
+        
+        
+        
+        
+        boxTalonUp = new JoystickButton(io, 6);
+        boxTalonDown = new JoystickButton(io, 7);
+        
     	//Current Arm Button Definitions (not 3d)
-    	lockLeft = new JoystickButton(armCon,1);
+    	//lockLeft = new JoystickButton(armCon,1);
         
         //Motor Con Def
     	rl = new CANTalon(2); //was 4
     	fl = new CANTalon(1); //was 3
     	fr = new CANTalon(4); //was 1
     	rr = new CANTalon(3); //was 2
+    	boxTalon = new Talon(6);
+    	gearTalon = new Talon(7);
+    	winchTalon = new Talon(5);
+    	
+    	
     	//kickerTal = new Talon(0);
-    	
-    	liftGear = new Talon(6);
-    	
-    	leftArm = new Talon(2);
-    	shieldMaster = new Talon(3);
-    	shieldSlave = new Talon(0);
-    	lockArm = new Talon(1);
+    	//leftArm = new Talon(2);
+    	//shieldMaster = new Talon(3);
+    	//shieldSlave = new Talon(0);
+    	//lockArm = new Talon(1);
     	
     	//Motor Con Config
     	rl.changeControlMode(CANTalon.TalonControlMode.PercentVbus);
     	fl.changeControlMode(CANTalon.TalonControlMode.PercentVbus);
     	fr.changeControlMode(CANTalon.TalonControlMode.PercentVbus);
     	rr.changeControlMode(CANTalon.TalonControlMode.PercentVbus);
-    	rl.enableBrakeMode(false);
-    	fl.enableBrakeMode(false);
-    	fr.enableBrakeMode(false);
-    	rr.enableBrakeMode(false);
+    	rl.enableBrakeMode(true);
+    	fl.enableBrakeMode(true);
+    	fr.enableBrakeMode(true);
+    	rr.enableBrakeMode(true);
+    	
     	
     	//Sensor Def
-    	leftArmEncode = new Encoder(0,1);
+    	/*leftArmEncode = new Encoder(0,1);
     	shieldMasterEncode = new Encoder(2,3);
     	shieldSlaveEncode = new Encoder(4,5);
     	lockArmEncode = new Encoder(6,7);
+    	*/
+    	boxEncoder = new Encoder(0,1);
     	
+    	//Encoder(1)
+    	/*
     	//Control Variables Def
     	armSideLeft = false;
     	armSideRight = false;
     	armsTogether = false;
     	leftLocked = false;
     	leftArmSetPosition = 0;
+    	*/
+    	
+    	boxPosition = 0.0;
+    	
+    	winchSpeed =1;
+    	
     	lockLeftButtonState = false;
     	prevLeftLockButtonState = false;
     	
     	//Camera Config
     	camera.setQuality(30);
     	camera.startAutomaticCapture();
+    	camera.startAutomaticCapture(camera);
+    	
     }
     
     public void autonomousInit() {
@@ -170,7 +219,7 @@ public class Robot extends IterativeRobot {
     {
     	switch (autoSelected)
     	{
-    		case flapAuto:
+    		/*case flapAuto:
     			flapAutoMethod();
     			break;
     		case roughAuto:
@@ -191,6 +240,7 @@ public class Robot extends IterativeRobot {
     		case rockWallAuto:
     			rockWallAuto();
     			break;
+    			*/
     		default:
     			standardAutoMethod();
     			break;
@@ -198,29 +248,34 @@ public class Robot extends IterativeRobot {
     }
 
     public void teleopPeriodic() {
-    	leftArmEncode.reset();
+    	//leftArmEncode.reset();
     	
-    	leftArm.set(0);
+    //	leftArm.set(0);
     	
     	fr.set(0);
     	rr.set(0);
     	rl.set(0);
     	fl.set(0);
-
+    	boxTalon.set(0);
+    	boxEncoder.reset();
+    	boxEncoder.setReverseDirection(boxEncoder.getDirection());
+    	
+    	
+    	
     	lockLeftButtonState = false;
     	prevLeftLockButtonState = false;
-    	leftLocked = false;
-    	leftArmSetPosition = 0;
+    	//leftLocked = false;
+    	//leftArmSetPosition = 0;
     	
     	while (isOperatorControl() && isEnabled())
         {
     		//Drive Code
         	if(Math.abs(joy.getRawAxis(1)) > 0.3 || Math.abs(joy.getRawAxis(5)) > 0.3)
         	{
-        		rl.set(joy.getRawAxis(1));
-        		fl.set(joy.getRawAxis(1));
-        		fr.set(-joy.getRawAxis(5));
-        		rr.set(-joy.getRawAxis(5));
+        		rl.set(-joy.getRawAxis(1)/4);
+        		fl.set(-joy.getRawAxis(1)/4);
+        		fr.set(joy.getRawAxis(5)/4);
+        		rr.set(joy.getRawAxis(5)/4);
         	}
         	else
         	{
@@ -230,28 +285,78 @@ public class Robot extends IterativeRobot {
 	        	rr.set(0);
         	}
         	
-        	//Kicker Code
-        	/*
-        	if (kickerBut.get()== true)
+        	/*if(io.getRawButton(2) && boxEncoder.getDistance() < boxMax)
         	{
-        		kickerTal.set(1);
+        		boxTalon.set(1);
         	}
-        	else if (kickerButBack.get() == true)
+        	else if(io.getRawButton(5) && boxEncoder.getDistance() > boxMin)
         	{
-        		kickerTal.set(-0.2);
+        		boxTalon.set(-1*((io.getRawAxis(1)+1)/2));
         	}
-        	else if (kickerHalf.get()== true)
+        	else        		
         	{
-        		kickerTal.set(0.5);
+        		boxTalon.set(0);
+        	}
+        	//*/
+        	
+        	if(Math.abs(armCon.getRawAxis(1)) > .05)
+        	{
+        		//if(armCon.getRawAxis(1)>.05)
+        			gearTalon.set(armCon.getRawAxis(1)/4);
+        		//else
+        			//gearTalon.set(armCon.getRawAxis(1)/8);
+	
         	}
         	else
         	{
-        		kickerTal.set(0);
+        		gearTalon.set(0);
         	}
-        	*/
+        	
+        	if(io.getRawButton(11))
+        	{
+        		winchTalon.set(1*((io.getRawAxis(1)+1)/2));
+        	}
+        	else
+        	{
+        		winchTalon.set(0);
+        	}
+        	
+        	
+        	
+        	
+        	
+        	if(io.getRawButton(6) && (boxEncoder.getDistance() <boxMax))
+        	{
+        	
+        		while(boxEncoder.getDistance() < boxMax)
+        		{
+        			boxTalon.set(.5);
+        			
+        			
+        		}
+        		boxTalon.set(0);
+        		
+        		
+        		
+          	}else
+        	if (io.getRawButton(7) && boxEncoder.getDistance() > boxMin)
+          	{
+          	
+          		while(boxEncoder.getDistance()  > boxPosition)
+          		{
+          			boxTalon.set(-.5);
+          		}
+          		boxTalon.set(0);
+          		
+          	}
+          	
+        	 
+        	
+        	
+        	
         	
         	//Toggle Left Lock State
-        	lockLeftButtonState = lockLeft.get();
+        	/*lockLeftButtonState = lockLeft.get();
         	if (lockLeftButtonState && !prevLeftLockButtonState)
         	{
         		leftLocked = !leftLocked;
@@ -262,7 +367,7 @@ public class Robot extends IterativeRobot {
         	//Control Arms
         	if (leftLocked == false)
         	{
-	        	if (true) //why?
+	        	if (true)
 	        	{
 	        		if (Math.abs(armCon.getY()) >= 0.1)
 	        		{
@@ -277,7 +382,7 @@ public class Robot extends IterativeRobot {
         		leftArm.set(-((leftArmSetPosition-Math.abs(leftArmEncode.get())) * pGain));	
         	}
         	
-        	//Shield Control3
+        	//Shield Control
         	if (shieldUp.get()==true  && shieldDown.get()!=true)
         	{
         		shieldMaster.set(-0.4);
@@ -307,28 +412,59 @@ public class Robot extends IterativeRobot {
         	{
         		lockArm.set(0);
         	}
+        	*/
+        	
+        	
+        	
+        	
+//if(io.getRawAxis()))
+        	
+        	
+        	//TestTalonMovement
+        	
+        	//lockLeftButtonState = lockLeft.get();
+        	
+        	//Kicker Code
+        	/*
+        	if (kickerBut.get()== true)
+        	{
+        		kickerTal.set(1);
+        	}
+        	else if (kickerButBack.get() == true)
+        	{
+        		kickerTal.set(-0.2);
+        	}
+        	else if (kickerHalf.get()== true)
+        	{
+        		kickerTal.set(0.5);
+        	}
+        	else
+        	{
+        		kickerTal.set(0);
+        	}
+        	*/
         	
         	//Left Arm Values
-        	SmartDashboard.putNumber("Left Arm Encoder Value:", Math.abs(leftArmEncode.get()));
-        	SmartDashboard.putNumber("Left Arm Lock Value:", leftArmSetPosition);
-        	SmartDashboard.putBoolean("Left Arm Lock State:", leftLocked);
-        	SmartDashboard.putNumber("Left Arm Speed", (-(leftArmSetPosition-Math.abs(leftArmEncode.get())) * pGain));
+        	//SmartDashboard.putNumber("Left Arm Encoder Value:", Math.abs(leftArmEncode.get()));
+        	//SmartDashboard.putNumber("Left Arm Lock Value:", leftArmSetPosition);
+        	//SmartDashboard.putBoolean("Left Arm Lock State:", leftLocked);
+        	//SmartDashboard.putNumber("Left Arm Speed", (-(leftArmSetPosition-Math.abs(leftArmEncode.get())) * pGain));
         	
         	//Control Values
         	SmartDashboard.putNumber("Manual Servo Control Value", io.getY());
+        	SmartDashboard.putNumber("Encoder VALUE", boxPosition);
         	
         	SmartDashboard.putNumber("Arm Value", armCon.getY());
-        }
+        }	
     }
     
     public void testPeriodic() {
     
     }
     
-    //these methods are 2016 specific
     public void standardAutoMethod()
     {
-    	leftArmEncode.reset();
+    	//leftArmEncode.reset();
        	//leftArm.set(0.3);
        	
        	fr.set(0.4);
@@ -355,9 +491,11 @@ public class Robot extends IterativeRobot {
         	}
        	}
         	
-        leftArmEncode.reset();
+        //leftArmEncode.reset();
     }
     
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /*
     public void flapAutoMethod()
     {
     	leftArmEncode.reset();
@@ -407,7 +545,7 @@ public class Robot extends IterativeRobot {
         	{
         		leftArm.set(0);
         	}
-        	*/
+        	*
         	if (System.currentTimeMillis()-time >= 2750)
         	{
         		fr.set(0);
@@ -439,7 +577,7 @@ public class Robot extends IterativeRobot {
         	{
         		leftArm.set(0);
         	}
-        	*/
+        	*
         	if (System.currentTimeMillis()-time >= 3250)
         	{
         		fr.set(0);
@@ -471,7 +609,7 @@ public class Robot extends IterativeRobot {
         	{
         		leftArm.set(0);
         	}
-        	*/
+        	*
         	if (System.currentTimeMillis()-time >= 3000)
         	{
         		fr.set(0);
@@ -503,7 +641,7 @@ public class Robot extends IterativeRobot {
         	{
         		leftArm.set(0);
         	}
-        	*/
+        	*
         	if (System.currentTimeMillis()-time >= 3250)
         	{
         		fr.set(0);
@@ -520,6 +658,9 @@ public class Robot extends IterativeRobot {
     {
     	leftArmEncode.reset();
     }
+    */
+    
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     //Autonomous Arm Code
     /*
@@ -536,5 +677,4 @@ public class Robot extends IterativeRobot {
     	
     leftArmEncode.reset();
     */
-    
 }
